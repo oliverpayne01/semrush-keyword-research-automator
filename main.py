@@ -1,25 +1,29 @@
 # automatically export a list of filtered keywords based on seeds
 
 # dict of seeds w/ properties for filter inclusions and exclusions
-# specify match type
 
 import os
 import requests
 import pandas as pd
+import io
 
 base_url = "https://api.semrush.com/"
 
 
 def get_related_keywords(phrase, db, limit=1):
     params = {
-        "type": "phrase_related",
+        "type": "phrase_fullsearch",
         "key": os.getenv("API_KEY"),
         "phrase": phrase,
         "database": db,
-        "export_columns": "",
+        "export_columns": "Ph,Nq",
         "display_limit": limit,
     }
 
-    r = requests.get(base_url + "?", params=params)
-    r.raise_for_status()
-    # df = pd.read_csv()
+    response = requests.get(base_url + "?", params)
+    response.raise_for_status()
+    return pd.read_csv(io.StringIO(response.text), sep=";")
+
+
+df = get_related_keywords("surety bonds in arizona", "us")
+print(df.head())
