@@ -2,8 +2,6 @@ import os
 import requests
 import pandas as pd
 import io
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.cluster import KMeans
 
 base_url = "https://api.semrush.com/"
 
@@ -45,23 +43,12 @@ def loop_keyword_seeds(seeds, search_type):
         df["seed"] = kw
         all_keywords.append(df)
 
-        # keywords_raw = pd.concat(all_keywords, ignore_index=True)
-        # keywords_raw.to_csv("output.csv")
-
     return all_keywords
 
 
-def cluster_keywords(df):
-    texts = df["keyword"].tolist()
-
-    # Vectorize
-    vectorizer = TfidfVectorizer(stop_words="english")
-    X = vectorizer.fit_transform(texts)
-
-    # Cluster
-    n_clusters = 10
-    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
-    df["cluster"] = kmeans.fit_predict(X)
+def export_keywords(df):
+    keywords = pd.concat(df, ignore_index=True)
+    keywords.to_csv("output.csv")
 
 
 def main():
@@ -69,11 +56,8 @@ def main():
     search_type = get_search_type()
 
     keywords = loop_keyword_seeds(seed_keywords, search_type)
-    keywords.to_csv("output.csv")
+    export_keywords(keywords)
 
 
 if __name__ == "__main__":
     main()
-
-# add option for exclusions
-# add option to export directly to a google sheet (would require OAuth)
