@@ -12,7 +12,7 @@ def get_keywords(phrase: str, limit=1, report_type="phrase_fullsearch"):
         "key": os.getenv("API_KEY"),
         "phrase": phrase,
         "database": "us",
-        "export_columns": "Ph,Nq",
+        "export_columns": "Ph,In,Nq",
         "display_limit": limit,
     }
 
@@ -23,21 +23,23 @@ def get_keywords(phrase: str, limit=1, report_type="phrase_fullsearch"):
 
 def main():
     seed_keywords = input("Enter seed keywords separated by ',': ").split(", ")
+    search_type = input("What type of search? (1. Full, 2. Questions): ")
 
     def get_keywords_from_seeds():
         all_keywords = []
 
         for kw in seed_keywords:
-            df_broad = get_keywords(kw, limit=10)
-            df_broad["seed"] = kw
-            all_keywords.append(df_broad)
-
-            df_questions = get_keywords(kw, limit=10, report_type="phrase_questions")
-            df_questions["seed"] = kw
-            all_keywords.append(df_questions)
+            df = get_keywords(
+                kw,
+                limit=1,
+                report_type=(
+                    "phrase_fullsearch" if search_type == 1 else "phrase_questions"
+                ),
+            )
+            df["seed"] = kw
+            all_keywords.append(df)
 
             keywords_raw = pd.concat(all_keywords, ignore_index=True)
-            # print(keywords_raw.head())
             keywords_raw.to_csv("output.csv")
 
     get_keywords_from_seeds()
@@ -45,3 +47,14 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# Comparison (vs, difference)
+
+# Informational
+# Commercial
+# Transactional
+
+# add option for exclusions
+# add option to export directly to a google sheet (would require OAuth)
+
+# get top 5 "product / service keywords"
