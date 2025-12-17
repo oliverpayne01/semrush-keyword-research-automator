@@ -6,9 +6,9 @@ import io
 base_url = "https://api.semrush.com/"
 
 
-def get_keywords(phrase: str, limit=1):
+def get_keywords(phrase: str, limit=1, report_type="phrase_fullsearch"):
     params = {
-        "type": "phrase_fullsearch",
+        "type": report_type,
         "key": os.getenv("API_KEY"),
         "phrase": phrase,
         "database": "us",
@@ -21,19 +21,27 @@ def get_keywords(phrase: str, limit=1):
     return pd.read_csv(io.StringIO(response.text), sep=";")
 
 
-# loop over seed keywords and get keywords containing the seed (broad match)
-seed_keywords = [
-    "surety bonds",
-    "small business insurance",
-    "business liability insurance",
-]
+def main():
+    seed_keywords = input("Enter seed keywords separated by ',': ").split(", ")
 
-all_keywords = []
-for kw in seed_keywords:
-    df = get_keywords(kw, limit=20)
-    df["seed"] = kw
-    all_keywords.append(df)
+    def get_keywords_from_seeds():
+        all_keywords = []
 
-keywords_raw = pd.concat(all_keywords, ignore_index=True)
-# print(keywords_raw.head())
-keywords_raw.to_csv("output.csv")
+        for kw in seed_keywords:
+            df_broad = get_keywords(kw, limit=10)
+            df_broad["seed"] = kw
+            all_keywords.append(df_broad)
+
+            df_questions = get_keywords(kw, limit=10, report_type="phrase_questions")
+            df_questions["seed"] = kw
+            all_keywords.append(df_questions)
+
+            keywords_raw = pd.concat(all_keywords, ignore_index=True)
+            # print(keywords_raw.head())
+            keywords_raw.to_csv("output.csv")
+
+    get_keywords_from_seeds()
+
+
+if __name__ == "__main__":
+    main()
