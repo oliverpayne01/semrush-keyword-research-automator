@@ -6,6 +6,10 @@ import io
 base_url = "https://api.semrush.com/"
 
 
+def get_seed_keywords():
+    input("Enter seed keywords separated by ',': ").split(", ")
+
+
 def get_keywords(phrase: str, limit=1, report_type="phrase_fullsearch"):
     params = {
         "type": report_type,
@@ -29,9 +33,7 @@ def get_search_type():
         get_search_type()
 
 
-def loop_keyword_seeds(seeds, search_type):
-    all_keywords = []
-
+def loop_keyword_seeds(seeds, search_type, all_keywords=[]):
     for kw in seeds:
         df = get_keywords(
             kw,
@@ -52,10 +54,18 @@ def export_keywords(df):
 
 
 def main():
-    seed_keywords = input("Enter seed keywords separated by ',': ").split(", ")
+    seed_keywords = get_seed_keywords()
     search_type = get_search_type()
 
     keywords = loop_keyword_seeds(seed_keywords, search_type)
+
+    search_again_input = input(
+        "Would you like to perform another search? (Y / Any key to exit): "
+    ).upper()
+    if search_again_input == "Y":
+        main()
+        return
+
     export_keywords(keywords)
 
 
