@@ -3,20 +3,18 @@ import requests
 import pandas as pd
 import io
 
+# Add input to select script entry point (create keyword exclusion list, research)
+
 base_url = "https://api.semrush.com/"
 
 
 def get_seed_keywords():
-    seed_keywords = (
-        input("Enter seed keywords (separated by ','): ").replace(", ", ",").split(",")
-    )
-    print(seed_keywords)
+    seed_keywords = input("Enter seed keywords (separated by ','): ").split(",")
+
     print("Seeds: ")
-
-    # remove whitespace function / normalize
-
     for seed in seed_keywords:
-        print(f"\t{seed}")
+        cleaned_seed = seed.strip()
+        print(f"\t{cleaned_seed}")
 
     confirm_input = input("Confirm selection (Y / N): ").upper()
     if confirm_input == "N":
@@ -45,13 +43,15 @@ def get_keywords(
 
 
 def get_search_type():
-    search_type = input("What type of search? (1. Full, 2. Questions): ")
+    search_type_input = input("What type of search? (1. Full, 2. Questions): ")
 
-    if search_type != "1" and search_type != "2":
-        print(f"Error: Input '{search_type}' not an option.")
+    if search_type_input != "1" and search_type_input != "2":
+        print(f"Error: Input '{search_type_input}' not an option.")
         get_search_type()
+        return
 
-    return search_type
+    search_types = {1: "phrase_fullsearch", 2: "phrase_questions"}
+    return search_types[int(search_type_input)]
 
 
 def get_display_limit():
@@ -83,7 +83,7 @@ def get_keyword_exclusions():
     # Co (containing) - Operation
 
 
-def loop_keyword_seeds(seeds, search_type, keyword_exclusions=None):
+def get_keywords_from_seeds(seeds, search_type, keyword_exclusions=None):
     keywords = []
 
     for kw in seeds:
@@ -129,7 +129,7 @@ def main(keywords=[]):
 
     keyword_exclusions = get_keyword_exclusions()
 
-    keywords = loop_keyword_seeds(seed_keywords, search_type, keyword_exclusions)
+    keywords = get_keywords_from_seeds(seed_keywords, search_type, keyword_exclusions)
 
     search_again_input = input(
         "Would you like to perform another search? (Y / Any key to exit): "
