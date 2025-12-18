@@ -7,10 +7,28 @@ base_url = "https://api.semrush.com/"
 
 
 def get_seed_keywords():
-    input("Enter seed keywords separated by ',': ").split(", ")
+    seed_keywords = (
+        input("Enter seed keywords (separated by ','): ").replace(", ", ",").split(",")
+    )
+    print(seed_keywords)
+    print("Seeds: ")
+
+    # remove whitespace function / normalize
+
+    for seed in seed_keywords:
+        print(f"\t{seed}")
+
+    confirm_input = input("Confirm selection (Y / N): ").upper()
+    if confirm_input == "N":
+        get_seed_keywords()
+        return
+
+    return seed_keywords
 
 
-def get_keywords(phrase: str, limit=1, report_type="phrase_fullsearch"):
+def get_keywords(
+    phrase: str, limit=1, report_type="phrase_fullsearch", display_filter=None
+):
     params = {
         "type": report_type,
         "key": os.getenv("API_KEY"),
@@ -18,6 +36,7 @@ def get_keywords(phrase: str, limit=1, report_type="phrase_fullsearch"):
         "database": "us",
         "export_columns": "Ph,In,Nq",
         "display_limit": limit,
+        "display_filter": display_filter,
     }
 
     response = requests.get(base_url + "?", params)
@@ -32,8 +51,41 @@ def get_search_type():
         print(f"Error: Input '{search_type}' not an option.")
         get_search_type()
 
+    return search_type
 
-def loop_keyword_seeds(seeds, search_type, all_keywords=[]):
+
+def get_display_limit():
+    display_limit_input = str(input("Enter maximum row limit: "))
+    if display_limit_input.isdigit():
+        if int(display_limit_input) > 0:
+            return int(display_limit_input)
+
+    print("Input must be an integer greater than 0")
+    get_display_limit()
+
+
+def get_keyword_exclusions():
+    keyword_exclusions_raw = (
+        input("Enter keywords to exclude (separated by ','): ")
+        .replace(", ", ",")
+        .split(",")
+    )
+    keyword_exclusions_parsed = f"%2D%7CPh%7CCo%7C"
+
+    for kw_exclusion in keyword_exclusions_raw:
+        keyword_exclusions_parsed += kw_exclusion
+
+    return keyword_exclusions_parsed
+
+    # | %7C
+    # %2D | Ph | Co | <values>
+    # display_filter - sign | field | operation | value1;value2
+    # Co (containing) - Operation
+
+
+def loop_keyword_seeds(seeds, search_type, keyword_exclusions=None):
+    keywords = []
+
     for kw in seeds:
         df = get_keywords(
             kw,
@@ -41,11 +93,16 @@ def loop_keyword_seeds(seeds, search_type, all_keywords=[]):
             report_type=(
                 "phrase_fullsearch" if search_type == 1 else "phrase_questions"
             ),
+            keyword_exclusions=f"%2B%7CPh%7CCo%7C[{kw}]{keyword_exclusions}",
         )
         df["seed"] = kw
-        all_keywords.append(df)
+        keywords.append(df)
 
-    return all_keywords
+    return keywords
+
+
+def clean_data():
+    print("called")
 
 
 def export_keywords(df):
@@ -53,20 +110,38 @@ def export_keywords(df):
     keywords.to_csv("output.csv")
 
 
-def main():
+def main(keywords=[]):
     seed_keywords = get_seed_keywords()
     search_type = get_search_type()
+    limit = get_display_limit()
 
-    keywords = loop_keyword_seeds(seed_keywords, search_type)
+    api_unit_consumption = 0
+    if search_type == "phrase_fullsearch":
+        api_unit_consumption = len(seed_keywords) * limit * 20
+    elif search_type == "phrase_questions":
+        api_unit_consumption = len(seed_keywords) * limit * 40
+    confirm_request_input = input(
+        f"Max API unit consumption is estimated at {api_unit_consumption}. Proceed? (Y / N): "
+    ).upper()
+    if confirm_request_input == "N":
+        main()
+        return
+
+    keyword_exclusions = get_keyword_exclusions()
+
+    keywords = loop_keyword_seeds(seed_keywords, search_type, keyword_exclusions)
 
     search_again_input = input(
         "Would you like to perform another search? (Y / Any key to exit): "
     ).upper()
     if search_again_input == "Y":
-        main()
+        main(keywords)
         return
 
     export_keywords(keywords)
+
+
+# Add an option to select the keyword intents when searching
 
 
 if __name__ == "__main__":
