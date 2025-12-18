@@ -2,6 +2,7 @@ import os
 import requests
 import pandas as pd
 import io
+import datetime
 
 # Add input to select script entry point (create keyword exclusion list, research)
 
@@ -22,24 +23,6 @@ def get_seed_keywords():
         return
 
     return seed_keywords
-
-
-def get_keywords(
-    phrase: str, limit=1, report_type="phrase_fullsearch", display_filter=None
-):
-    params = {
-        "type": report_type,
-        "key": os.getenv("API_KEY"),
-        "phrase": phrase,
-        "database": "us",
-        "export_columns": "Ph,In,Nq",
-        "display_limit": limit,
-        "display_filter": display_filter,
-    }
-
-    response = requests.get(base_url + "?", params)
-    response.raise_for_status()
-    return pd.read_csv(io.StringIO(response.text), sep=";")
 
 
 def get_search_type():
@@ -93,12 +76,33 @@ def get_keywords_from_seeds(seeds, search_type, keyword_exclusions=None):
             report_type=(
                 "phrase_fullsearch" if search_type == 1 else "phrase_questions"
             ),
-            keyword_exclusions=f"%2B%7CPh%7CCo%7C[{kw}]{keyword_exclusions}",
+            # keyword_exclusions=f"%2B%7CPh%7CCo%7C[{kw}]{keyword_exclusions}",
         )
         df["seed"] = kw
+        # df.loc[df["Intent"] == 0, "Intent"] = "commercial"
+        # df.loc[df["Intent"] == 1, "Intent"] = "informational"
+        # df.loc[df["Intent"] == 3, "Intent"] = "transactional"
         keywords.append(df)
 
     return keywords
+
+
+def get_keywords(
+    phrase: str, limit=1, report_type="phrase_fullsearch", display_filter=""
+):
+    params = {
+        "type": report_type,
+        "key": os.getenv("API_KEY"),
+        "phrase": phrase,
+        "database": "us",
+        "export_columns": "Ph,In,Nq",
+        "display_limit": limit,
+        "display_filter": display_filter,
+    }
+
+    response = requests.get(base_url + "?", params)
+    response.raise_for_status()
+    return pd.read_csv(io.StringIO(response.text), sep=";")
 
 
 def clean_data():
@@ -107,7 +111,10 @@ def clean_data():
 
 def export_keywords(df):
     keywords = pd.concat(df, ignore_index=True)
-    keywords.to_csv("output.csv")
+
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    keywords.to_csv(f"output_{timestamp}.csv")
 
 
 def main(keywords=[]):
@@ -127,21 +134,18 @@ def main(keywords=[]):
         main()
         return
 
-    keyword_exclusions = get_keyword_exclusions()
+    # keyword_exclusions = get_keyword_exclusions()
 
-    keywords = get_keywords_from_seeds(seed_keywords, search_type, keyword_exclusions)
+    keywords = get_keywords_from_seeds(seed_keywords, search_type)
 
     search_again_input = input(
-        "Would you like to perform another search? (Y / Any key to exit): "
+        "Would you like to perform another search? (Y / N): "
     ).upper()
     if search_again_input == "Y":
         main(keywords)
         return
 
     export_keywords(keywords)
-
-
-# Add an option to select the keyword intents when searching
 
 
 if __name__ == "__main__":
